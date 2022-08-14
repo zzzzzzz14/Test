@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>货币识别</title>
+<link rel="stylesheet" href="../statics/layui/css/layui.css">
+<script type="text/javascript" src="../statics/layui/layui.js"></script>
+<style type="text/css">
+body{
+	width:80%;
+	algin:center;
+	margin:0 auto;
+}
+.layui-upload-img{
+	width:600px;
+	height:400px;
+}
+</style>
+</head>
+<body>
+	<form class="layui-form">
+	<fieldset class="layui-elem-field layui-field-title"
+		style="margin-top: 30px;">
+		<legend>货币识别</legend>
+	</fieldset>
+	<div class="layui-upload" style="border:1px dashed #000;align-content:center">
+		<button type="button" class="layui-btn" id="test1">上传图片</button>
+		<button type="button" class="layui-btn" id="classify" lay-filter="add" lay-submit="">识别</button>
+		<div class="layui-upload-list" style="border:1px dashed #000;width:600px" >
+			<img class="layui-upload-img" id="demo1" >
+			<p id="demoText"></p>
+		</div>
+		<input type="text" name="filename" id="filename"  />
+		
+		<div class="inline-block" style="border:1px dashed #000;width:600px;height:200px" id="cresult" name="cresult">
+		
+		</div>
+		<div>
+			<div class="layui-progress layui-progress-big" lay-showpercent="yes"
+				lay-filter="demo">
+				<div class="layui-progress-bar" lay-percent=""></div>
+			</div>
+		</div>
+	</div>
+	<a name="list-progress"> </a>
+
+	<div style="margin-top: 10px;"></div>
+	</form>
+<script>
+layui.use(['upload', 'element', 'layer'], function(){
+  var $ = layui.jquery
+  ,upload = layui.upload
+  ,element = layui.element
+  ,layer = layui.layer
+  ,form=layui.form;
+  
+  //常规使用 - 普通图片上传
+  var uploadInst = upload.render({
+    elem: '#test1'
+    ,url: '/CurrencyClassify/UploadServlet' //此处用的是第三方的 http 请求演示，实际使用时改成您自己的上传接口即可。
+    ,before: function(obj){
+      //预读本地文件示例，不支持ie8
+      obj.preview(function(index, file, result){
+        $('#demo1').attr('src', result); //图片链接（base64）
+      });
+      
+      element.progress('demo', '0%'); //进度条复位
+      layer.msg('上传中', {icon: 16, time: 0});
+    }
+    ,done: function(res){
+      //如果上传失败
+      alert(res);
+      if(res.code > 0){
+        return layer.msg('上传失败');
+      }else if(res.code==0){
+    	  $('#filename').val(res.data.src);
+      }
+      //上传成功的一些操作
+      //……
+      $('#demoText').html(''); //置空上传失败的状态
+    }
+    ,error: function(){
+      //演示失败状态，并实现重传
+      var demoText = $('#demoText');
+      demoText.html('<span style="color: #FF5722;">上传失败</span> <a class="layui-btn layui-btn-xs demo-reload">重试</a>');
+      demoText.find('.demo-reload').on('click', function(){
+        uploadInst.upload();
+      });
+    }
+    //进度条
+    ,progress: function(n, elem, e){
+      element.progress('demo', n + '%'); //可配合 layui 进度条元素使用
+      if(n == 100){
+        layer.msg('上传完毕', {icon: 1});
+      }
+    }
+  });
+  
+//监听提交
+	form.on('submit(add)', function(data){
+		//console.log(data);//data采集form的数据		
+		$.ajax({
+			type : 'POST',
+			url : '/CurrencyClassify/currencyClassifyServlet',
+			data : data.field,
+			success : function(data) {
+				var data=eval("("+data+")");
+				
+				var div=$('#cresult');
+				div.html('');
+				div.append('<ul> ');
+				div.append("<li>"+"货币所属国家"+":"+data.result.currencyName+"</li>");
+				div.append("<li>"+"出版年份"+":"+data.result.year+"</li>");
+				div.append("<li>"+"面值"+":"+data.result.currencyDenomination+"</li>");
+				div.append("<li>"+"货币代码"+":"+data.result.currencyCode+"</li>");
+				// $.each(data.result,function(index,item){
+				// 	alert(item);
+				// 	div.append("<li>"+item+"</li>");
+				// });
+				div.append('</ul>');				
+			}
+		});
+		return false;
+	});
+}); 
+  </script>
+</body>
+</html>
